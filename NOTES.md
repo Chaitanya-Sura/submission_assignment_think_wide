@@ -156,10 +156,12 @@ Given the time budget, priorities were ordered by business criticality and risk:
 - Thread-safe storage with idempotency and race-free concurrency guarantees.
 - Fixed all 4 concurrency, deduplication, scope, and timezone bugs in the `debugging/` service.
 - Full test suite with automated race condition checks and verification against real-world seed data.
+- Built-in, zero-dependency interactive live marketing analytics web dashboard (`http://localhost:8080/`) with real-time KPI cards, rate gauges, daily UTC breakdown, and a webhook simulation tool.
 
 ### Intentionally Skipped:
-- **Frontend UI polish:** As specified in the brief, focused 100% on backend robustness, correctness, performance, and clear documentation.
+- **Heavy Frontend Framework Overhead:** Kept the frontend completely dependency-free (pure Vanilla HTML5/CSS3/JS embedded via Go `embed.FS`) without requiring node/npm packages or external build chains.
 - **External database dependencies:** Chose a clean, zero-dependency thread-safe in-memory architecture for instant portability and setup simplicity (`go run .`).
+
 
 ---
 

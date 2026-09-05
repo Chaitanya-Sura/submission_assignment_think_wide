@@ -30,6 +30,14 @@ go run .
 ```
 The server will start listening on port `:8080`.
 
+### Web Dashboard
+Open your browser and navigate to:
+```
+http://localhost:8080/
+```
+The dashboard provides a real-time interface with live KPI cards, rate progress bars, daily UTC breakdown, interactive event activity log, 1-click seed dataset ingestion, and a webhook batch simulation tool.
+
+
 ---
 
 ## API Reference

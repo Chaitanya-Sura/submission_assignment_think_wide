@@ -272,6 +272,18 @@ func validateAndNormalize(raw RawEvent) (Event, error) {
 	}, nil
 }
 
+func (s *MemoryStore) ListCampaigns() []string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	campaigns := make([]string, 0, len(s.campaigns))
+	for c := range s.campaigns {
+		campaigns = append(campaigns, c)
+	}
+	return campaigns
+}
+
 func roundRate(val float64) float64 {
 	return math.Round(val*10000) / 10000
 }
+

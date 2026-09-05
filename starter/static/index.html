@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Relay | Campaign Events Real-Time Analytics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Top Navbar -->
+    <header class="navbar">
+      <div class="nav-brand">
+        <div class="logo-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>Relay<span>Events</span></h1>
+          <span class="badge-env">Production Real-Time</span>
+        </div>
+      </div>
+
+      <div class="nav-controls">
+        <div class="status-indicator" id="service-status">
+          <span class="status-dot"></span>
+          <span class="status-text">Connected</span>
+        </div>
+
+        <div class="campaign-selector-wrapper">
+          <label for="campaign-select">Campaign:</label>
+          <select id="campaign-select" class="select-input">
+            <option value="" disabled selected>Loading campaigns...</option>
+          </select>
+        </div>
+
+        <button id="btn-seed-data" class="btn btn-secondary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+          </svg>
+          Ingest Seed Dataset
+        </button>
+
+        <button id="btn-open-simulator" class="btn btn-primary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+          Simulate Webhook
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-container">
+      <!-- Empty State / No Campaign Selected -->
+      <section id="empty-state" class="empty-state-card" style="display: none;">
+        <div class="empty-icon">📊</div>
+        <h2>No Campaign Data Ingested Yet</h2>
+        <p>Your event store is currently empty. Click below to ingest the realistic provider seed dataset or simulate incoming webhooks.</p>
+        <div class="empty-actions">
+          <button id="btn-seed-empty" class="btn btn-primary btn-lg">Ingest Sample Seed Traffic</button>
+          <button id="btn-sim-empty" class="btn btn-secondary btn-lg">Open Webhook Simulator</button>
+        </div>
+      </section>
+
+      <!-- Campaign Dashboard View -->
+      <div id="dashboard-view" class="dashboard-content">
+        <!-- Campaign Header Banner -->
+        <div class="campaign-header">
+          <div>
+            <div class="campaign-title-row">
+              <h2 id="active-campaign-title">Loading...</h2>
+              <span id="active-campaign-badge" class="badge badge-active">Live</span>
+            </div>
+            <p class="campaign-subtitle">Real-time delivery provider metrics aggregated from streaming webhook batches</p>
+          </div>
+          <div class="auto-refresh-pill">
+            <span class="refresh-spinner" id="refresh-indicator"></span>
+            <span>Live Sync Active</span>
+          </div>
+        </div>
+
+        <!-- Metric KPI Cards Grid -->
+        <div class="metrics-grid">
+          <!-- Sent Card -->
+          <div class="metric-card card-sent">
+            <div class="card-top">
+              <span class="card-label">Messages Sent</span>
+              <div class="card-icon sent-icon">📤</div>
+            </div>
+            <div class="card-value" id="val-sent">0</div>
+            <div class="card-footer">
+              <span class="footer-meta">Total dispatched to providers</span>
+            </div>
+          </div>
+
+          <!-- Delivered Card -->
+          <div class="metric-card card-delivered">
+            <div class="card-top">
+              <span class="card-label">Delivered</span>
+              <div class="card-icon delivered-icon">✅</div>
+            </div>
+            <div class="card-value" id="val-delivered">0</div>
+            <div class="card-footer">
+              <span class="rate-badge badge-green" id="rate-delivered-badge">0.0% Delivery Rate</span>
+            </div>
+          </div>
+
+          <!-- Opened Card -->
+          <div class="metric-card card-opened">
+            <div class="card-top">
+              <span class="card-label">Opens (Gross / Unique)</span>
+              <div class="card-icon opened-icon">👁️</div>
+            </div>
+            <div class="card-value-group">
+              <span class="card-value" id="val-opened">0</span>
+              <span class="card-subvalue" id="val-unique-opens">(0 Unique)</span>
+            </div>
+            <div class="card-footer">
+              <span class="rate-badge badge-cyan" id="rate-open-badge">0.0% Open Rate</span>
+            </div>
+          </div>
+
+          <!-- Clicked Card -->
+          <div class="metric-card card-clicked">
+            <div class="card-top">
+              <span class="card-label">Clicks (Gross / Unique)</span>
+              <div class="card-icon clicked-icon">🖱️</div>
+            </div>
+            <div class="card-value-group">
+              <span class="card-value" id="val-clicked">0</span>
+              <span class="card-subvalue" id="val-unique-clicks">(0 Unique)</span>
+            </div>
+            <div class="card-footer">
+              <span class="rate-badge badge-purple" id="rate-ctr-badge">0.0% CTR</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Calculated Rates & KPIs Progress Section -->
+        <div class="section-card rates-card">
+          <div class="card-header">
+            <h3>Calculated Performance Rates</h3>
+            <span class="info-tag">Formulas strictly derived from delivered denominator</span>
+          </div>
+          <div class="rates-grid">
+            <div class="rate-item">
+              <div class="rate-meta">
+                <span class="rate-name">Delivery Rate</span>
+                <span class="rate-num" id="rate-delivery-text">0.00%</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-bar bar-green" id="rate-delivery-bar" style="width: 0%"></div>
+              </div>
+              <span class="formula-label">Delivered / Sent</span>
+            </div>
+
+            <div class="rate-item">
+              <div class="rate-meta">
+                <span class="rate-name">Gross Open Rate</span>
+                <span class="rate-num" id="rate-open-text">0.00%</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-bar bar-cyan" id="rate-open-bar" style="width: 0%"></div>
+              </div>
+              <span class="formula-label">Opened / Delivered</span>
+            </div>
+
+            <div class="rate-item">
+              <div class="rate-meta">
+                <span class="rate-name">Unique Open Rate</span>
+                <span class="rate-num" id="rate-unique-open-text">0.00%</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-bar bar-blue" id="rate-unique-open-bar" style="width: 0%"></div>
+              </div>
+              <span class="formula-label">Unique Contacts / Delivered</span>
+            </div>
+
+            <div class="rate-item">
+              <div class="rate-meta">
+                <span class="rate-name">Click-Through Rate (CTR)</span>
+                <span class="rate-num" id="rate-ctr-text">0.00%</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-bar bar-purple" id="rate-ctr-bar" style="width: 0%"></div>
+              </div>
+              <span class="formula-label">Clicked / Delivered</span>
+            </div>
+
+            <div class="rate-item">
+              <div class="rate-meta">
+                <span class="rate-name">Click-To-Open Rate (CTOR)</span>
+                <span class="rate-num" id="rate-ctor-text">0.00%</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-bar bar-amber" id="rate-ctor-bar" style="width: 0%"></div>
+              </div>
+              <span class="formula-label">Clicked / Opened</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Daily UTC Breakdown Section -->
+        <div class="section-card daily-card">
+          <div class="card-header">
+            <div>
+              <h3>Daily UTC Activity Breakdown</h3>
+              <p class="section-desc">Events grouped strictly by event provider UTC timestamp calendar date</p>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table" id="daily-table">
+              <thead>
+                <tr>
+                  <th>UTC Date</th>
+                  <th>Delivered</th>
+                  <th>Opened</th>
+                  <th>Clicked</th>
+                  <th>Volume Distribution</th>
+                </tr>
+              </thead>
+              <tbody id="daily-tbody">
+                <tr><td colspan="5" class="table-empty">No daily data recorded yet</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Paginated Activity Stream -->
+        <div class="section-card events-card">
+          <div class="card-header flex-between">
+            <div>
+              <h3>Recent Event Activity Stream</h3>
+              <p class="section-desc">Audit trail for raw provider webhook payloads with pagination and filtering</p>
+            </div>
+            <div class="filter-controls">
+              <div class="type-filter-group">
+                <button class="filter-btn active" data-type="">All</button>
+                <button class="filter-btn" data-type="sent">Sent</button>
+                <button class="filter-btn" data-type="delivered">Delivered</button>
+                <button class="filter-btn" data-type="opened">Opened</button>
+                <button class="filter-btn" data-type="clicked">Clicked</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table" id="events-table">
+              <thead>
+                <tr>
+                  <th>Event ID</th>
+                  <th>Type</th>
+                  <th>Contact ID</th>
+                  <th>Timestamp (UTC)</th>
+                  <th>Metadata</th>
+                </tr>
+              </thead>
+              <tbody id="events-tbody">
+                <tr><td colspan="5" class="table-empty">Loading events...</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination Footer -->
+          <div class="pagination-footer">
+            <span class="pagination-info" id="pagination-info">Showing 0-0 of 0</span>
+            <div class="pagination-buttons">
+              <button id="btn-prev-page" class="btn btn-sm btn-secondary" disabled>← Previous</button>
+              <button id="btn-next-page" class="btn btn-sm btn-secondary" disabled>Next →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Webhook Simulator Modal -->
+    <div id="sim-modal" class="modal-overlay" style="display: none;">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <div class="modal-title-row">
+            <span class="modal-icon">⚡</span>
+            <h3>Webhook Batch Ingestion Simulator</h3>
+          </div>
+          <button id="btn-close-modal" class="btn-icon-close">&times;</button>
+        </div>
+
+        <div class="modal-body">
+          <p class="modal-desc">Post raw JSON event batches directly to <code>POST /events</code> to test deduplication, partial batch error handling, and live updates.</p>
+
+          <div class="presets-row">
+            <span>Quick Presets:</span>
+            <button class="btn btn-xs btn-outline" id="preset-valid">Valid Batch</button>
+            <button class="btn btn-xs btn-outline" id="preset-duplicates">With Duplicates</button>
+            <button class="btn btn-xs btn-outline" id="preset-malformed">Mixed Malformed</button>
+            <button class="btn btn-xs btn-outline" id="preset-seed">Load 5 Seed Events</button>
+          </div>
+
+          <div class="editor-wrapper">
+            <textarea id="sim-json-input" spellcheck="false" placeholder="[ { &quot;event_id&quot;: &quot;...&quot; } ]"></textarea>
+          </div>
+
+          <!-- Real-time Ingestion Result Box -->
+          <div id="sim-result-box" class="result-box" style="display: none;">
+            <div class="result-header">
+              <span id="result-status-badge" class="badge">200 OK</span>
+              <span id="result-summary">Batch Processed</span>
+            </div>
+            <div class="result-counts">
+              <div class="count-pill pill-total">Total: <span id="res-total">0</span></div>
+              <div class="count-pill pill-accepted">Accepted: <span id="res-accepted">0</span></div>
+              <div class="count-pill pill-duplicates">Duplicates: <span id="res-duplicates">0</span></div>
+              <div class="count-pill pill-rejected">Rejected: <span id="res-rejected">0</span></div>
+            </div>
+            <div id="res-error-details" class="error-details" style="display: none;"></div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button id="btn-cancel-modal" class="btn btn-secondary">Close</button>
+          <button id="btn-submit-sim" class="btn btn-primary">Send Webhook Request</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="toast"></div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

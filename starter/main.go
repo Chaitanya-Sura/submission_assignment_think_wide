@@ -1,32 +1,59 @@
 package main
 
 import (
+	"embed"
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 )
+
+//go:embed static/*
+var staticFS embed.FS
 
 var globalStore = NewMemoryStore()
 
 func main() {
 	mux := setupRouter(globalStore)
 	addr := ":8080"
-	fmt.Printf("Campaign Events Service listening on %s\n", addr)
+	fmt.Printf("Campaign Events Service listening on http://localhost%s\n", addr)
 	log.Fatal(http.ListenAndServe(addr, mux))
 }
 
 func setupRouter(store *MemoryStore) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /events", handlePostEvents(store))
+	mux.HandleFunc("GET /campaigns", handleListCampaigns(store))
 	mux.HandleFunc("GET /campaigns/{campaignID}/stats", handleGetStats(store))
 	mux.HandleFunc("GET /campaigns/{campaignID}/events", handleGetEvents(store))
 	mux.HandleFunc("GET /health", handleHealth)
+
+	// Serve embedded static dashboard at root
+	staticSub, err := fs.Sub(staticFS, "static")
+	if err == nil {
+		fileServer := http.FileServer(http.FS(staticSub))
+		mux.Handle("GET /", fileServer)
+	}
+
 	return mux
 }
+
+func handleListCampaigns(store *MemoryStore) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		campaigns := store.ListCampaigns()
+		sort.Strings(campaigns)
+		writeJSON(w, http.StatusOK, map[string]any{
+			"campaigns": campaigns,
+			"total":     len(campaigns),
+		})
+	}
+}
+
 
 // handlePostEvents ingests a JSON array of events from webhook delivery providers.
 func handlePostEvents(store *MemoryStore) http.HandlerFunc {

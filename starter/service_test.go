@@ -163,7 +163,24 @@ func TestHttpEndpointsAndSeedFile(t *testing.T) {
 	if len(eventsRes.Events) > 10 {
 		t.Errorf("limit exceeded: got %d items", len(eventsRes.Events))
 	}
+
+	// 4. Query GET /campaigns
+	reqCamps := httptest.NewRequest("GET", "/campaigns", nil)
+	wCamps := httptest.NewRecorder()
+	mux.ServeHTTP(wCamps, reqCamps)
+	if wCamps.Code != http.StatusOK {
+		t.Fatalf("expected 200 for /campaigns, got %d: %s", wCamps.Code, wCamps.Body.String())
+	}
+
+	// 5. Query GET / (dashboard)
+	reqRoot := httptest.NewRequest("GET", "/", nil)
+	wRoot := httptest.NewRecorder()
+	mux.ServeHTTP(wRoot, reqRoot)
+	if wRoot.Code != http.StatusOK {
+		t.Fatalf("expected 200 for dashboard GET /, got %d: %s", wRoot.Code, wRoot.Body.String())
+	}
 }
+
 
 func TestConcurrentIngestAndReads(t *testing.T) {
 	store := NewMemoryStore()
